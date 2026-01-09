@@ -3,6 +3,7 @@ import asyncio
 from core.message import MsgType, Message
 from paxos.proposer import Proposer
 from paxos.acceptor import Acceptor
+from paxos.learner import Learner
 
 class Node:
     def __init__(self, node_id,network,peers):
@@ -22,9 +23,15 @@ class Node:
         self.promises = {}
         self.proposer = Proposer(self)
 
+        # Paxos state (Learner)
+        self.accepted = {}
+        self.majority = (len(self.peers) // 2) + 1
+        self.learner = Learner(self)
+
     async def run(self):
         while True:
             msg = await self.inbox.get()
+            print(f"[NODE {self.node_id}] received {msg.msg_type} from {msg.src}")
             await self.handle(msg)
 
     async def handle(self, msg):
@@ -37,7 +44,5 @@ class Node:
       elif msg.msg_type == MsgType.ACCEPT:
           await self.acceptor.on_accept(msg)
 
-      #print(f"Node {self.node_id} received {msg.value}")
-
-      # elif msg.msg_type == MsgType.ACCEPTED:
-      #     await self.on_accepted(msg)
+      elif msg.msg_type == MsgType.ACCEPTED:
+          await self.on_accepted(msg)
