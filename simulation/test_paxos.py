@@ -1,13 +1,23 @@
 import asyncio
+import matplotlib.pyplot as plt
+
+plt.ion()  # interactive mode
+
+from simulation.visualizer import PaxosVisualizer
 from core.network import Network
 from core.node import Node
 
 async def main():
     net = Network(min_delay=0.1, max_delay=0.5)
 
-    # create 3 nodes (classic Paxos)
-    node_ids = [1, 2, 3]
+    # create 4 nodes (classic Paxos)
+    node_ids = [1, 5, 2, 7]
     nodes = {}
+
+    visualizer = PaxosVisualizer()
+    visualizer.register_nodes(node_ids)
+
+    net.visualizer = visualizer
 
     for nid in node_ids:
         nodes[nid] = Node(
