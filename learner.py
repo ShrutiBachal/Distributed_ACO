@@ -27,3 +27,7 @@ class Learner:
                 f"[LEARNER {self.node.node_id}] "
                 f"VALUE CHOSEN = {msg.value}"
             )
+            if self.node.network.visualizer:
+              self.node.network.visualizer.learned(
+              self.node.node_id,msg.value
+            )
