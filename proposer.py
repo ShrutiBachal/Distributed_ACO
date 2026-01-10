@@ -26,21 +26,38 @@ class Proposer:
         asyncio.create_task(self.node.network.send(msg))
 
     async def on_promise(self, msg):
-        if msg.proposal_id not in self.promises:
-            self.promises[msg.proposal_id] = []
+        pid = msg.proposal_id
 
-        self.promises[msg.proposal_id].append(msg)
+        # collect promises
+        if pid not in self.promises:
+            self.promises[pid] = []
 
-        if len(self.promises[msg.proposal_id]) > len(self.node.peers) // 2:
-            chosen_value = msg.value if msg.value else "DEFAULT"
+        self.promises[pid].append(msg)
+        majority = (len(self.node.peers) // 2) + 1
 
-            for peer in self.node.peers:
-                acc = Message(
-                    MsgType.ACCEPT,
-                    src=self.node.node_id,
-                    dst=peer,
-                    proposal_id=msg.proposal_id,
-                    value=self.proposed_value
-                )
-                asyncio.create_task(self.node.network.send(acc))
+        # only act once, exactly at majority
+        if len(self.promises[pid]) == majority:
+          # Paxos value selection rule
+          highest = None
+          chosen_value = self.proposed_value
+          for p in self.promises[pid]:
+            if p.value is not None:
+                if highest is None or p.accepted_id > highest[0]:
+                    highest = (p.accepted_id, p.value)
+
+          if highest:
+            chosen_value = highest[1]
+
+          print(f"[PROPOSER {self.node.node_id}] Chosen value={chosen_value}")
+
+          # send ACCEPT to all peers
+          for peer in self.node.peers:
+            acc = Message(
+                MsgType.ACCEPT,
+                src=self.node.node_id,
+                dst=peer,
+                proposal_id=pid,
+                value=chosen_value
+            )
+            asyncio.create_task(self.node.network.send(acc))
 
