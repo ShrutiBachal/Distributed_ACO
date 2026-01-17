@@ -13,19 +13,12 @@ class Node:
         self.peers = peers
 
         # Paxos state (Acceptor)
-        self.promised_id = None
-        self.accepted_id = None
-        self.accepted_value = None
         self.acceptor = Acceptor(self)
 
         # Paxos state (Proposer)
-        self.proposal_seq = 0
-        self.promises = {}
         self.proposer = Proposer(self)
 
         # Paxos state (Learner)
-        self.accepted = {}
-        self.majority = (len(self.peers) // 2) + 1
         self.learner = Learner(self)
 
     async def run(self):
