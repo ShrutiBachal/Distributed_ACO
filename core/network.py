@@ -3,7 +3,7 @@ import asyncio
 import random
 
 class Network:
-    def __init__(self, min_delay=0.05, max_delay=0.2, loss_rate=0.3,visualizer = None):
+    def __init__(self, min_delay=0.05, max_delay=0.2, loss_rate=0.05,visualizer = None):
         self.nodes = {}
         self.min_delay = min_delay
         self.max_delay = max_delay
