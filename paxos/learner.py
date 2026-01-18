@@ -7,6 +7,9 @@ class Learner:
         self.node = node
         self.accepted = {}   # pid → set(acceptors)
         self.majority = (len(node.peers) // 2) + 1
+        self.learned_event = asyncio.Event()
+        self.learned_pid = None
+        self.learned_value = None
 
     async def on_accepted(self, msg):
         pid = msg.proposal_id
@@ -22,11 +25,12 @@ class Learner:
             f"count_accepted={len(self.accepted[pid])}"
         )
 
-        if len(self.accepted[pid]) >= self.majority:
-            print(
-                f"[LEARNER {self.node.node_id}] "
-                f"VALUE CHOSEN = {msg.value}"
-            )
+        if len(self.accepted[pid]) >= self.majority:    # majority = 1 more than half of peers
+            self.learned_pid = pid
+            self.learned_value = msg.value
+            print(f"[LEARNER {self.node.node_id}] Learned {msg.value}")
+            self.learned_event.set()
+            
             if self.node.network.visualizer:
               self.node.network.visualizer.learned(
               self.node.node_id,msg.value
