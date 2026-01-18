@@ -10,8 +10,8 @@ from core.node import Node
 async def main():
     net = Network(min_delay=0.1, max_delay=0.5)
 
-    # create 4 nodes (classic Paxos)
-    node_ids = [1, 5, 2, 7]
+    # create 3 nodes (classic Paxos)
+    node_ids = [1, 5, 2]
     nodes = {}
 
     visualizer = PaxosVisualizer()
@@ -36,6 +36,6 @@ async def main():
     await nodes[1].proposer.propose("VALUE_X")  # node can access proposer class due to Proposer(self) passed to it's self.proposer
 
     # let Paxos finish
-    await asyncio.sleep(3)
+    await asyncio.sleep(5)
 
 await main()
