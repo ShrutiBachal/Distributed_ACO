@@ -12,26 +12,30 @@ class Proposer:
         self.timeout_tasks = {}  # proposal_id -> asyncio.Task
 
     async def propose(self, value):
-     
-      self.proposal_seq += 1  # each time it proposes, seq value increases by 1
-      proposal_id = (self.proposal_seq, self.node.node_id)
-      self.proposed_value = value
-      self.promises[proposal_id] = []
+        self.proposal_seq += 1  # each time it proposes, seq value increases by 1
+        proposal_id = (self.proposal_seq, self.node.node_id)
+        self.proposed_value = value
+        self.promises[proposal_id] = []
+        visualizer = self.node.network.visualizer
 
-      print(f"[PROPOSER {self.node.node_id}] Proposing value={value} with [Pid {proposal_id}")
-      for peer in self.node.peers:
-          msg = Message(
-          MsgType.PREPARE,
-          src=self.node.node_id,
-          dst=peer,
-          proposal_id=proposal_id,
+        print(f"[PROPOSER {self.node.node_id}] Proposing value={value} with [Pid {proposal_id}")
+        visualizer.set_active_round(
+            proposal_id[1], # proposer_id
+            proposal_id[0]  # round_id
         )
-        asyncio.create_task(self.node.network.send(msg))
+        for peer in self.node.peers:
+            msg = Message(
+            MsgType.PREPARE,
+            src=self.node.node_id,
+            dst=peer,
+            proposal_id=proposal_id
+            )
+            asyncio.create_task(self.node.network.send(msg))
 
-      # start timeout watcher
-      self.timeout_tasks[proposal_id] = asyncio.create_task(
-         self._on_timeout(proposal_id,1.5)
-      )
+        # start timeout watcher
+        self.timeout_tasks[proposal_id] = asyncio.create_task(
+            self._on_timeout(proposal_id,1.5)
+        )
 
    async def _on_timeout(self, proposal_id,timeout):
         await asyncio.sleep(timeout)
@@ -50,7 +54,7 @@ class Proposer:
             # retry with higher proposal number
             await self.propose(self.proposed_value)
 
-    async def on_promise(self, msg):
+ async def on_promise(self, msg):
         pid = msg.proposal_id
 
         # collect promises
