@@ -6,7 +6,7 @@ from paxos.acceptor import Acceptor
 from paxos.learner import Learner
 
 class Node:
-    def __init__(self, node_id,network,peers):
+    def __init__(self, node_id, network, peers):
         self.node_id = node_id
         self.network = network
         self.inbox = asyncio.Queue()
@@ -24,6 +24,16 @@ class Node:
     async def run(self):
         while True:
             msg = await self.inbox.get()
+            if self.network.consensus_reached:
+              return
+                
+            if msg.run_id != self.network.run_id:       # ignore msgs which do not belong to current run
+              print(
+                  f"[NODE {self.node_id}] Ignoring stale message "
+                  f"(msg run={msg.run_id}, current run={self.network.run_id})"
+              )
+              continue
+                
             print(f"[NODE {self.node_id}] received {msg.msg_type} from {msg.src}")
             await self.handle(msg)
 
@@ -38,4 +48,5 @@ class Node:
           await self.acceptor.on_accept(msg)
 
       elif msg.msg_type == MsgType.ACCEPTED:
-          await self.on_accepted(msg)
+          await self.proposer.on_accepted(msg)
+          await self.learner.on_accepted(msg)
