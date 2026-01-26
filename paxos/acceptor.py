@@ -22,6 +22,7 @@ class Acceptor:
                 dst=msg.src,
                 proposal_id=msg.proposal_id,
                 accepted_id=self.accepted_id,
+                run_id=self.node.network.run_id
             )
             asyncio.create_task(self.node.network.send(reply))
 
@@ -39,6 +40,7 @@ class Acceptor:
                 src=self.node_id,
                 dst=msg.src,
                 proposal_id=msg.proposal_id,
-                value=msg.value
+                value=msg.value,
+                run_id=self.node.network.run_id
             )
             asyncio.create_task(self.node.network.send(reply))
