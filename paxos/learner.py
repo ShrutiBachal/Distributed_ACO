@@ -1,5 +1,6 @@
 %%writefile paxos/learner.py
 import asyncio
+import time
 from core.message import Message,MsgType
 
 class Learner:
@@ -13,10 +14,11 @@ class Learner:
 
     async def on_accepted(self, msg):
         pid = msg.proposal_id
-
+        if self.node.network.consensus_reached:
+            return
+            
         if pid not in self.accepted:
             self.accepted[pid] = set()
-
         self.accepted[pid].add(msg.src)
 
         print(
