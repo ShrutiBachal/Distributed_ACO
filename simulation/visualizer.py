@@ -18,7 +18,7 @@ class PaxosVisualizer:
         "ACCEPT": "orange",
         "ACCEPTED": "red"
     }
-
+    
   def register_nodes(self, node_ids):
         for n in node_ids:
             self.G.add_node(n)
@@ -27,7 +27,9 @@ class PaxosVisualizer:
   def set_active_round(self, proposer_id, round_id):          # used for distinct round visualiztion
     self.active_round = (proposer_id, round_id)
 
-  def record(self, src, dst, msg_type, proposer_id, round_id):
+  def record(self, src, dst, msg_type, proposer_id, round_id, run_id):
+    if run_id != self.network.run_id:
+        return
     self.events.append({
         "src": src,
         "dst": dst,
@@ -39,7 +41,7 @@ class PaxosVisualizer:
   def learned(self, node_id, value):
       plt.text(
         0.5, -0.1,
-        f"LEARNED VALUE = {value} at Node {node_id}",
+        f"LEARNED VALUE = {value} at Node {node_id} in time : {self.network.end_time - self.network.start_time}",
         fontsize=12,
         color="purple",
         ha="center",
