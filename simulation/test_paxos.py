@@ -3,12 +3,15 @@ import matplotlib.pyplot as plt
 
 plt.ion()  # interactive mode
 
+from uuid import uuid4
 from simulation.visualizer import PaxosVisualizer
 from core.network import Network
 from core.node import Node
 
 async def main():
+    run_id = str(uuid4())
     net = Network(min_delay=0.05, max_delay=0.2)
+    net.run_id = run_id
 
     # create 3 nodes (classic Paxos)
     node_ids = [1, 5, 2]
@@ -35,6 +38,6 @@ async def main():
     asyncio.create_task(nodes[2].proposer.propose("VALUE_2")) # node can access proposer class due to Proposer(self) passed to it's self.proposer
 
     # let Paxos finish
-    await asyncio.sleep(5)
+    await asyncio.sleep(5.5)
 
 await main()
