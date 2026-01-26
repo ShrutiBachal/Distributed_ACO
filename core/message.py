@@ -17,6 +17,7 @@ class Message:
         self.proposal_id = proposal_id
         self.value = value
         self.accepted_id = accepted_id
+        self.run_id = run_id
 
     def __repr__(self):
         return (f"{self.msg_type} "
