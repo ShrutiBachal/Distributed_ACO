@@ -1,9 +1,10 @@
 %%writefile core/network.py
 import asyncio
 import random
+import time
 
 class Network:
-    def __init__(self, min_delay=0.05, max_delay=0.2, loss_rate=0.05,visualizer = None):
+    def __init__(self, min_delay=0.05, max_delay=0.2, loss_rate=0.05,run_id = None,visualizer = None):
         self.nodes = {}
         self.min_delay = min_delay
         self.max_delay = max_delay
@@ -12,6 +13,7 @@ class Network:
         self.consensus_reached = False
         self.start_time = 0
         self.end_time = 0
+        self.run_id = run_id
 
     def register(self, node):
         """Register a node with the network"""
@@ -23,9 +25,11 @@ class Network:
       return None
 
     async def send(self, message):
-        if self.start_time is None:
-            self.start_time = time.monotonic()
-            
+        if message.run_id != self.run_id:
+          return
+        if self.consensus_reached:
+          return
+        
         if self.visualizer:
             self.visualizer.record(         
                 message.src,
@@ -33,8 +37,12 @@ class Network:
                 message.msg_type.value,
                 message.proposal_id[1],     # proposer_id
                 message.proposal_id[0],     # round_id (1,3) (2-> round, 3->node_id)
+                self.run_id
             )
             self.visualizer.draw()
+            
+        if self.start_time is None:
+            self.start_time = time.monotonic()
             
         """Send a message with simulated delay and loss"""
         # Simulate message loss
