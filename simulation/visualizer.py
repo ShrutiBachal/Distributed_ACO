@@ -2,14 +2,17 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 from collections import deque
+from core.message import Message
+from core.node import Node
 
 class PaxosVisualizer:
-  def __init__(self,network):
+  def __init__(self,network,nodes):
+    self.nodes = nodes
     self.network = network
     self.G = nx.DiGraph()
+    self.pos = {}
     self.events = deque(maxlen=20)            # recent messages
-    self.pos = nx.spring_layout(self.G)
-    self.active_round = None
+    self.active_round = set()
     self.p_id = None
 
     self.colors = {
@@ -22,10 +25,17 @@ class PaxosVisualizer:
   def register_nodes(self, node_ids):
         for n in node_ids:
             self.G.add_node(n)
-        self.pos = nx.circular_layout(self.G)
+        for n in self.G.nodes():
+            p = self.nodes[n].position
+            if p is None or len(p) != 2:    # safety fallback
+                p = (0.0, 0.0)
+            self.pos[n] = p
     
-  def set_active_round(self, proposer_id, round_id):          # used for distinct round visualiztion
-    self.active_round = (proposer_id, round_id)
+  def set_active_round(self, proposer_id, round_id):        # used for distinct round visualiztion
+    self.active_rounds.add((proposer_id, round_id))         # changed from accepting single active round to accepting multiple active rounds (for multiple proposers)
+
+  def clear_active_round(self, proposer_id, round_id):
+    self.active_rounds.discard((proposer_id, round_id))
 
   def record(self, src, dst, msg_type, proposer_id, round_id, run_id):
     if run_id != self.network.run_id:
@@ -37,27 +47,12 @@ class PaxosVisualizer:
         "proposer": proposer_id,
         "round": round_id
     })
-
-  def learned(self, node_id, value):
-      plt.text(
-        0.5, -0.1,
-        f"LEARNED VALUE = {value} at Node {node_id} in time : {self.network.end_time - self.network.start_time}",
-        fontsize=12,
-        color="purple",
-        ha="center",
-        transform=plt.gca().transAxes
-      )
-      nx.draw_networkx_nodes(
-        self.G,
-        self.pos,
-        nodelist=[node_id],
-        node_color="violet",
-        node_size=1600
-      )
     
   def draw(self):
     plt.clf()
-    ax = plt.gca()
+    pos = {}
+    for node_id in self.G.nodes():
+      pos[node_id] = self.nodes[node_id].position
 
     if (self.network.consensus_reached):    
         t = (self.network.end_time - self.network.start_time)    # Displaying total time taken for single consensus 
@@ -73,11 +68,12 @@ class PaxosVisualizer:
           
     # draw nodes
     nx.draw_networkx_nodes(
-        self.G, self.pos,
+        self.G,
+        pos,
         node_size=500,
         node_color="lightblue"
     )
-    nx.draw_networkx_labels(self.G, self.pos,font_size=10)
+    nx.draw_networkx_labels(self.G, pos,font_size=10)
 
     for event in self.events:
         src = event["src"]
@@ -101,7 +97,7 @@ class PaxosVisualizer:
         # draw edges
         nx.draw_networkx_edges(
             self.G,
-            self.pos,
+            pos,
             arrows=True,
             arrowstyle="-|>",
             arrowsize=20,
@@ -113,10 +109,10 @@ class PaxosVisualizer:
         )
 
         # label
-        label = f"P{proposer}-R{round_id}"    # labeling the path with Proposer_id and round_id instead of Message type
+        label = f"P{proposer}-R{round_id}-{msg_type}"    # labeling the path with Proposer_id and round_id instead of Message type
         nx.draw_networkx_edge_labels(
             self.G,
-            self.pos,
+            pos,
             edge_labels={(src, dst): label},
             font_color=color,
             font_size=9,
