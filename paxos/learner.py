@@ -14,11 +14,14 @@ class Learner:
 
     async def on_accepted(self, msg):
         pid = msg.proposal_id
+        visualizer = self.node.network.visualizer
+        if self.decided:
+          return
         if self.node.network.consensus_reached:
             return
             
         if pid not in self.accepted:
-            self.accepted[pid] = set()
+            self.accepted[pid] = []
         self.accepted[pid].add(msg.src)
 
         print(
@@ -31,15 +34,16 @@ class Learner:
             self.learned_pid = pid
             self.learned_value = msg.value
             print(f"[LEARNER {self.node.node_id}] Learned {msg.value}")
-            
-            if not self.node.network.consensus_reached:
-                self.node.network.consensus_reached = True
-                self.node.network.end_time = time.monotonic()    # as soon as a learner learns a value and first consensus is reached, time stops
-                
-            duration = self.node.network.end_time - self.node.network.start_time
-            print(f"[CONSENSUS] Value={msg.value} reached in {duration:.4f}s")
-            
-            if self.node.network.visualizer:
-              self.node.network.visualizer.learned(
-              self.node.node_id,msg.value
-            )
+
+            rid = msg.value["robot_id"]
+            target = msg.value["target"]
+
+            self.node.known_positions[rid] = target   # each node learns
+
+            if self.node.node_id == rid:              # only the proposer moves
+                self.node.position = target           # robot moves
+                await asyncio.sleep(0.5)
+                visualizer.clear_active_round(      # used for multiple proposer
+                  pid[1],
+                  pid[0]
+                )
