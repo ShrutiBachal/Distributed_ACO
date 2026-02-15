@@ -1,5 +1,7 @@
 %%writefile core/node.py
 import asyncio
+import random
+import math
 from core.message import MsgType, Message
 from paxos.proposer import Proposer
 from paxos.acceptor import Acceptor
@@ -10,7 +12,9 @@ class Node:
         self.node_id = node_id
         self.network = network
         self.inbox = asyncio.Queue()
-        self.peers = peers
+        self.peers = [n for n in peers if n != node_id]   # each node eliminating itself from peers
+        self.position = (random.uniform(-5, 5), random.uniform(-5, 5))  # initialising the initial random position
+        self.known_positions = {}   # robot_id → (x, y) to keep track of which positions are occupied
 
         # Paxos state (Acceptor)
         self.acceptor = Acceptor(self)
@@ -20,6 +24,12 @@ class Node:
 
         # Paxos state (Learner)
         self.learner = Learner(self)
+
+    def line_target(robot_id, spacing):
+      return (robot_id * spacing, 0.0)
+
+    def __repr__(self):
+        return f"Node {self.node_id}"
 
     async def run(self):
         while True:
