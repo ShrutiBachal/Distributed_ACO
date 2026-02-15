@@ -9,7 +9,7 @@ class MsgType(Enum):
     LEARN = "LEARN"
 
 class Message:
-    def __init__(self, msg_type, src, dst, value = None, proposal_id = None,accepted_id = None):  # Order of args matter non-default should be before default
+    def __init__(self, msg_type, src, dst, run_id = None, value = None, proposal_id = None,accepted_id = None):  # Order of args matter non-default should be before default
     # Making it None allows the value to be optional i.e., no compulsion to always declare it
         self.msg_type = msg_type
         self.src = src
