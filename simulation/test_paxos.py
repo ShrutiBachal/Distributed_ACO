@@ -7,6 +7,7 @@ from uuid import uuid4
 from simulation.visualizer import PaxosVisualizer
 from core.network import Network
 from core.node import Node
+from paxos.learner import Learner
 
 async def main():
     run_id = str(uuid4())
@@ -24,20 +25,32 @@ async def main():
             peers=node_ids
         )
         net.register(nodes[nid])
+        learner = Learner(nodes[nid])
+        
+    # start nodes
+    for node in nodes.values():
+        asyncio.create_task(node.run())
         
     visualizer = PaxosVisualizer()
     visualizer.register_nodes(node_ids)
     net.visualizer = visualizer
+    await asyncio.sleep(1)
 
-    # start nodes
-    for node in nodes.values():
-        asyncio.create_task(node.run())
+    for node in node_ids:
+        value = {
+            "robot_id": node,
+            "target": Node.line_target(node, 2.0)
+        }
+        asyncio.create_task(nodes[node].proposer.propose(value))
 
-    # choose node 1 as proposer
-    await asyncio.sleep(1)   # let event loop settle
-    asyncio.create_task(nodes[2].proposer.propose("VALUE_2")) # node can access proposer class due to Proposer(self) passed to it's self.proposer
+        await asyncio.sleep(8)
+        visualizer.draw()
 
-    # let Paxos finish
-    await asyncio.sleep(5.5)
+    if(learner.learned_value != None):
+          if not net.consensus_reached:
+              net.consensus_reached = True
+              print(f"[CONSENSUS] reached in {duration:.4f}s")
+    net.end_run(success = True)       # 2
+    duration = net.end_time - net.start_time  # made out of if block
 
 await main()
