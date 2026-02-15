@@ -4,7 +4,7 @@ import random
 import time
 
 class Network:
-    def __init__(self, min_delay=0.05, max_delay=0.2, loss_rate=0.05,run_id = None,visualizer = None):
+    def __init__(self, min_delay=0.1, max_delay=1.5, loss_rate=0.05,run_id = None,visualizer = None):
         self.nodes = {}
         self.min_delay = min_delay
         self.max_delay = max_delay
@@ -23,6 +23,9 @@ class Network:
       if self.start_time and self.end_time:
           return self.end_time - self.start_time
       return None
+
+    def end_run(self, success):
+      self.end_time = time.monotonic()
 
     async def send(self, message):
         if message.run_id != self.run_id:
