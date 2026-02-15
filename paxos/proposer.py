@@ -1,5 +1,6 @@
 %%writefile paxos/proposer.py
 import asyncio
+import time
 from core.message import Message,MsgType
 
 class Proposer:
@@ -28,10 +29,11 @@ class Proposer:
         visualizer = self.node.network.visualizer
 
         print(f"[PROPOSER {self.node.node_id}] Proposing value={value} with [Pid {self.proposal_id}")
-        visualizer.set_active_round(
-            proposal_id[1], # proposer_id
-            proposal_id[0]  # round_id
-        )
+        if visualizer:
+            visualizer.set_active_round(
+                proposal_id[1], # proposer_id
+                proposal_id[0]  # round_id
+            )
         for peer in self.node.peers:
                 msg = Message(
                 MsgType.PREPARE,
@@ -45,14 +47,16 @@ class Proposer:
         self.phase[self.proposal_id] = "PREPARE"
         # start timeout watcher
         self.timeout_tasks[self.proposal_id] = asyncio.create_task(
-            self._on_timeout(self.proposal_id,1.9,self.proposed_value)
+            self._on_timeout(self.proposal_id,1.5,self.proposed_value)
         )
 
     async def _on_timeout(self, proposal_id,timeout):
-        await asyncio.sleep(timeout)
-
+        visualizer = self.node.network.visualizer
         if self.node.network.run_id != self.run_id:
           return
+            
+        await asyncio.sleep(timeout)
+
         if self.node.network.consensus_reached:
           return
 
@@ -62,12 +66,10 @@ class Proposer:
 
         if phase == "PREPARE":
             if len(self.promises.get(proposal_id, [])) >= self.majority:   
-                print(f"[PROPOSER {self.node.node_id}] TIMEOUT pid={proposal_id}, retrying")
                 return  # succeeded, no retry
 
         if phase == "ACCEPT":
             if len(self.accepted.get(proposal_id, [])) >= self.majority:
-                print("Accept phase stalled, retrying")
                 return  # succeeded, no retry
 
         self.promises.pop(proposal_id, None)
@@ -75,6 +77,12 @@ class Proposer:
         self.phase.pop(proposal_id, None)
         self.timeout_tasks.pop(proposal_id, None)
 
+        if visualizer:                  
+          visualizer.clear_active_round(
+              self.proposal_id[1],
+              self.proposal_id[0]
+          )
+        print(f"Proposer{proposal_id} retrying...")
         await self.propose(value)
 
     async def on_promise(self, msg):
@@ -106,7 +114,7 @@ class Proposer:
             if highest:
               chosen_value = highest[1]
 
-            print(f"[PROPOSER {self.node.node_id}] MAJORITY pid={pid} Chose value={chosen_value}, sending ACCEPT")
+            print(f"[PROPOSER {self.node.node_id}] MAJORITY pid={pid} Chosen position value={chosen_value}, sending ACCEPT")
             self.accepted[pid] = []
               
             # send ACCEPT to all peers
@@ -133,6 +141,7 @@ class Proposer:
             
     async def on_accepted(self,msg):
         pid = msg.proposal_id
+        visualizer = self.node.network.visualizer   # to clear active round
 
         if pid not in self.accepted:    # new round, new pid so if no majority received, pid is removed form accepted
           print(f"[PROPOSER {self.node.node_id}] STALE 'ACCEPTED' ignored pid={pid}")
@@ -141,11 +150,16 @@ class Proposer:
         self.accepted[pid].append(msg.src)
         print(f"[PROPOSER {self.node.node_id}] received 'ACCEPTED' from {msg.src} pid={pid}")
 
-        # If still not enough accept, retry
         if len(self.accepted.get(pid, [])) >= self.majority:
-          print(f"[PROPOSER {self.node.node_id}] Majority accept received")
+          print(f"[PROPOSER {self.node.node_id}] Majority accept received, moving to {msg.value['target']}")
 
           # cancel timeout
           if pid in self.timeout_tasks:
               self.timeout_tasks[pid].cancel()
               self.timeout_tasks.pop(pid, None)
+            
+          if visualizer:
+                visualizer.clear_active_round(
+                self.proposal_id[1],
+                self.proposal_id[0]
+          )
